@@ -1,0 +1,20 @@
+{
+  "name": "workdevelop/PresentationReplacer",
+  "description": "This package replaces pre-defined variables in presentations with data",
+  "keywords": ["PHP", "PowerPoint", "Presentation", "pptx", "odp", "zip"],
+  "type": "library",
+  "minimum-stability": "dev",
+  "authors": [
+    {
+      "name": "Oleksandr Perebyinis"
+    }
+  ],
+  "require": {
+    "ext-zip": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "PresentationReplacer\\": "src/"
+    }
+  }
+}
