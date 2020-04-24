@@ -3,6 +3,7 @@
   "description": "This package replaces pre-defined variables in presentations with data",
   "keywords": ["PHP", "PowerPoint", "Presentation", "pptx", "odp", "zip"],
   "type": "library",
+  "license": "MIT",
   "minimum-stability": "dev",
   "authors": [
     {
