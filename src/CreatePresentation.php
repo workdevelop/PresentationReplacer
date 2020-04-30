@@ -47,7 +47,6 @@ class CreatePresentation implements ICreatePresentation
      */
     private function copyTemplateToResultDestination(): void
     {
-        echo 'call__';
         if (!file_exists($this->templatePath)) {
             throw new PptException('Template file not find');
         }
@@ -68,7 +67,6 @@ class CreatePresentation implements ICreatePresentation
      */
     private function prepare(): void
     {
-        echo 'is_prepare__';
         if (!$this->preparedBefore) {
             $this->copyTemplateToResultDestination();
             $this->preparedBefore = true;
