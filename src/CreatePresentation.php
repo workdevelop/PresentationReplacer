@@ -16,7 +16,6 @@ class CreatePresentation implements ICreatePresentation
      * @var string
      */
     private $templatePath;
-
     private $preparedBefore = false;
 
     /**
@@ -43,12 +42,12 @@ class CreatePresentation implements ICreatePresentation
         $this->regex = $regex;
     }
 
-
     /**
      * @throws PptException
      */
     private function copyTemplateToResultDestination(): void
     {
+        echo 'call__';
         if (!file_exists($this->templatePath)) {
             throw new PptException('Template file not find');
         }
@@ -69,6 +68,7 @@ class CreatePresentation implements ICreatePresentation
      */
     private function prepare(): void
     {
+        echo 'is_prepare__';
         if (!$this->preparedBefore) {
             $this->copyTemplateToResultDestination();
             $this->preparedBefore = true;
@@ -91,11 +91,12 @@ class CreatePresentation implements ICreatePresentation
             throw new PptException('Open filed');
         }
         for ($i = 0; $i < $zip->numFiles; $i++) {
-            $callable($zip, $i);
+            if (false === $callable($zip, $i)) {
+                break;
+            }
         }
         $zip->close();
     }
-
 
     /**
      * @throws PptException
@@ -113,7 +114,6 @@ class CreatePresentation implements ICreatePresentation
         return $data;
     }
 
-
     /**
      * @param array $data key - its full variable to replace bu own value
      * @throws PptException
@@ -123,14 +123,16 @@ class CreatePresentation implements ICreatePresentation
         $regex = $this->regex;
         $search = array_keys($data);
         $replace = array_values($data);
-        $this->iterateFiles(static function (\ZipArchive $zip, int $i) use ($regex, $search, $replace) {
-            $content = $zip->getFromIndex($i);
-            if (preg_match_all($regex, $content, $matches) && !empty($matches[1])) {
-                $content = str_replace($search, $replace, $content);
-                $localName = $zip->getNameIndex($i);
-                $zip->addFromString($localName, $content);
+        $this->iterateFiles(
+            static function (\ZipArchive $zip, int $i) use ($regex, $search, $replace) {
+                $content = $zip->getFromIndex($i);
+                if (preg_match_all($regex, $content, $matches) && !empty($matches[1])) {
+                    $content = str_replace($search, $replace, $content);
+                    $localName = $zip->getNameIndex($i);
+                    $zip->addFromString($localName, $content);
+                }
             }
-        });
+        );
     }
 
     public function download(string $fileName): void
@@ -145,5 +147,37 @@ class CreatePresentation implements ICreatePresentation
         flush(); // Flush system output buffer
         readfile($this->resultPath);
         die();
+    }
+
+    /**
+     * @param string $relativePath such as ppt/charts/chart1.xml'
+     * @return string full file content
+     * @throws PptException
+     */
+    public function getFileContentByRelativePath(string $relativePath): string
+    {
+        $this->iterateFiles(
+            static function (\ZipArchive $zip, int $i) use ($relativePath, &$content) {
+                unset($i);
+                $content = $zip->getFromName($relativePath);
+                return false;
+            }
+        );
+        return $content ?? '';
+    }
+
+    /**
+     * @param string $relativePath such as ppt/charts/chart1.xml
+     * @param string $content full file content
+     * @throws PptException
+     */
+    public function setFileContentByRelativePath(string $relativePath, string $content): void
+    {
+        $this->iterateFiles(
+            static function (\ZipArchive $zip, int $i) use ($relativePath, &$content) {
+                unset($i);
+                $zip->addFromString($relativePath, $content);
+            }
+        );
     }
 }

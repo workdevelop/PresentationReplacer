@@ -44,5 +44,23 @@ try {
 $createPresentation->download('ready_presentation.pptx');
 </pre>
 
+Get file content at presentation 
+<pre>
+try {
+    $chartContent = $createPresentation->getFileContentByRelativePath('ppt/charts/chart1.xml');
+} catch (\PresentationReplacer\PptException $exception) {
+    //do something
+}
+</pre>
+
+Set file content at presentation 
+<pre>
+try {
+    $createPresentation->setFileContentByRelativePath('ppt/charts/chart1.xml', $chartContent);
+} catch (\PresentationReplacer\PptException $exception) {
+    //do something
+}
+</pre>
+
 ## How to prepare presentation template 
 coming soon 
