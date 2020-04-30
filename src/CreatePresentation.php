@@ -175,6 +175,7 @@ class CreatePresentation implements ICreatePresentation
             static function (\ZipArchive $zip, int $i) use ($relativePath, &$content) {
                 unset($i);
                 $zip->addFromString($relativePath, $content);
+                return false;
             }
         );
     }
