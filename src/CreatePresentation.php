@@ -195,4 +195,62 @@ class CreatePresentation implements ICreatePresentation
             }
         );
     }
+
+    private function getSlideRId(string $slideName): ?string
+    {
+        $nameForDotRel = 'slides/'.$slideName;
+        $content = $this->getFileContentByRelativePath('ppt/_rels/presentation.xml.rels');
+        $xml = new \SimpleXMLElement($content);
+        $map = [];
+        foreach ($xml->Relationship as $rel) {
+            if ($nameForDotRel === (string)$rel->attributes()['Target']) {
+                return (string)$rel->attributes()['Id'];
+            }
+        }
+        return null;
+    }
+
+    private function getRIdToIdMap(string $content)
+    {
+        preg_match_all('/\<p:sldId\sid=\"(.*?)\"\sr:id=\"(.*?)\".*?\>/m', $content, $matches);
+
+        $slideIds = [];
+        foreach ($matches[1] as $k => $id) {
+            $slideIds[$matches[2][$k]] = $id;
+        }
+        return $slideIds;
+        $idForRemove = $slideIds[$map['slides/slide13.xml']['Id']];
+    }
+
+    /**
+     * @param string $relativePath
+     * @throws PptException
+     */
+    public function setUnUseSlideByPath(string $relativePath): void
+    {
+        $parts = explode('/', $relativePath);
+        $name = $parts[count($parts) - 1];
+        $rId = $this->getSlideRId($name);
+        if (null === $rId) {
+            throw new PptException('slide rId not found');
+        }
+        $content = $this->getFileContentByRelativePath('ppt/presentation.xml');
+        $map = $this->getRIdToIdMap($content);
+        if (!array_key_exists($rId, $map)) {
+            throw new PptException('slide Id not found');
+        }
+        $id = $map[$rId];
+
+        $xml = new \SimpleXMLElement($content);
+        $namespaces = $xml->getDocNamespaces(true);
+        foreach ($namespaces as $key => $val) {
+            $xml->registerXPathNamespace($key, $val);
+        }
+        $nodes = $xml->xpath('//p:sldId[@id=' . $id . ']');
+        $dom = dom_import_simplexml($nodes[0]);
+        $dom->parentNode->removeChild($dom);
+
+
+        $this->setFileContentByRelativePath('ppt/presentation.xml', $xml->asXML());
+    }
 }
