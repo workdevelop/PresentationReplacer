@@ -179,4 +179,20 @@ class CreatePresentation implements ICreatePresentation
             }
         );
     }
+
+    /**
+     * @param string $relativePath
+     * @param string $newFilePathAbsolutePath
+     * @throws PptException
+     */
+    public function replaceFile(string $relativePath, string $newFilePathAbsolutePath)
+    {
+        $this->iterateFiles(
+            static function (\ZipArchive $zip, int $i) use ($relativePath, $newFilePathAbsolutePath) {
+                unset($i);
+                $zip->addFromString($relativePath, file_get_contents($newFilePathAbsolutePath));
+                return false;
+            }
+        );
+    }
 }

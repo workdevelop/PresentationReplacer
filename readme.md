@@ -62,5 +62,18 @@ try {
 }
 </pre>
 
+If you need replace file by Path, such as image \
+You know relative file pat which was replaced('ppt/media/image2.png') \
+And you have Absolute path to file where is new image located
+
+<pre>
+$logoPath = __DIR__.'/../storage/image.png';
+try {
+    $createPresentation->setFileContentByRelativePath('ppt/media/image2.png', $logoPath);
+} catch (\PresentationReplacer\PptException $exception) {
+    //do something
+}
+</pre>
+
 ## How to prepare presentation template 
 coming soon 
