@@ -11,7 +11,9 @@
     }
   ],
   "require": {
-    "ext-zip": "*"
+    "ext-zip": "*",
+    "ext-dom": "*",
+    "ext-simplexml": "*"
   },
   "autoload": {
     "psr-4": {

@@ -2,6 +2,9 @@
 
 namespace PresentationReplacer;
 
+use SimpleXMLElement;
+use ZipArchive;
+
 class CreatePresentation implements ICreatePresentation
 {
     /**
@@ -81,7 +84,7 @@ class CreatePresentation implements ICreatePresentation
     {
         $this->prepare();
 
-        $zip = new \ZipArchive();
+        $zip = new ZipArchive();
         if (!file_exists($this->resultPath)) {
             throw new PptException('resultPath file not find');
         }
@@ -103,7 +106,7 @@ class CreatePresentation implements ICreatePresentation
     {
         $regex = $this->regex;
         $data = [];
-        $this->iterateFiles(static function (\ZipArchive $zip, int $i) use ($regex, &$data) {
+        $this->iterateFiles(static function (ZipArchive $zip, int $i) use ($regex, &$data) {
             $content = $zip->getFromIndex($i);
             if (preg_match_all($regex, $content, $matches) && !empty($matches[1])) {
                 $data[$zip->getNameIndex($i)] = $matches[1];
@@ -122,7 +125,7 @@ class CreatePresentation implements ICreatePresentation
         $search = array_keys($data);
         $replace = array_values($data);
         $this->iterateFiles(
-            static function (\ZipArchive $zip, int $i) use ($regex, $search, $replace) {
+            static function (ZipArchive $zip, int $i) use ($regex, $search, $replace) {
                 $content = $zip->getFromIndex($i);
                 if (preg_match_all($regex, $content, $matches) && !empty($matches[1])) {
                     $content = str_replace($search, $replace, $content);
@@ -155,7 +158,7 @@ class CreatePresentation implements ICreatePresentation
     public function getFileContentByRelativePath(string $relativePath): string
     {
         $this->iterateFiles(
-            static function (\ZipArchive $zip, int $i) use ($relativePath, &$content) {
+            static function (ZipArchive $zip, int $i) use ($relativePath, &$content) {
                 unset($i);
                 $content = $zip->getFromName($relativePath);
                 return false;
@@ -172,7 +175,7 @@ class CreatePresentation implements ICreatePresentation
     public function setFileContentByRelativePath(string $relativePath, string $content): void
     {
         $this->iterateFiles(
-            static function (\ZipArchive $zip, int $i) use ($relativePath, &$content) {
+            static function (ZipArchive $zip, int $i) use ($relativePath, &$content) {
                 unset($i);
                 $zip->addFromString($relativePath, $content);
                 return false;
@@ -181,6 +184,8 @@ class CreatePresentation implements ICreatePresentation
     }
 
     /**
+     * replace the file in zip archive (pptx) with a file from the outside
+     *
      * @param string $relativePath
      * @param string $newFilePathAbsolutePath
      * @throws PptException
@@ -188,7 +193,7 @@ class CreatePresentation implements ICreatePresentation
     public function replaceFile(string $relativePath, string $newFilePathAbsolutePath)
     {
         $this->iterateFiles(
-            static function (\ZipArchive $zip, int $i) use ($relativePath, $newFilePathAbsolutePath) {
+            static function (ZipArchive $zip, int $i) use ($relativePath, $newFilePathAbsolutePath) {
                 unset($i);
                 $zip->addFromString($relativePath, file_get_contents($newFilePathAbsolutePath));
                 return false;
@@ -196,12 +201,17 @@ class CreatePresentation implements ICreatePresentation
         );
     }
 
-    private function getSlideRId(string $slideName): ?string
+    /**
+     * Get slide relation Id from ppt/_rels/presentation.xml.rels
+     * @param string $slideName
+     * @return string|null
+     * @throws PptException
+     */
+    protected function getSlideRId(string $slideName): ?string
     {
         $nameForDotRel = 'slides/'.$slideName;
         $content = $this->getFileContentByRelativePath('ppt/_rels/presentation.xml.rels');
-        $xml = new \SimpleXMLElement($content);
-        $map = [];
+        $xml = new SimpleXMLElement($content);
         foreach ($xml->Relationship as $rel) {
             if ($nameForDotRel === (string)$rel->attributes()['Target']) {
                 return (string)$rel->attributes()['Id'];
@@ -210,19 +220,25 @@ class CreatePresentation implements ICreatePresentation
         return null;
     }
 
-    private function getRIdToIdMap(string $content)
+    /**
+     * Get mapper of Relation id to local id
+     * @param string $content
+     * @return array
+     */
+    protected function getRIdToIdMap(string $content)
     {
-        preg_match_all('/\<p:sldId\sid=\"(.*?)\"\sr:id=\"(.*?)\".*?\>/m', $content, $matches);
+        preg_match_all('/<p:sldId\sid=\"(.*?)\"\sr:id=\"(.*?)\".*?>/m', $content, $matches);
 
         $slideIds = [];
         foreach ($matches[1] as $k => $id) {
             $slideIds[$matches[2][$k]] = $id;
         }
         return $slideIds;
-        $idForRemove = $slideIds[$map['slides/slide13.xml']['Id']];
     }
 
     /**
+     * This is variant to hide slide. We remove information about it from ppt/presentation.xml
+     *
      * @param string $relativePath
      * @throws PptException
      */
@@ -241,7 +257,7 @@ class CreatePresentation implements ICreatePresentation
         }
         $id = $map[$rId];
 
-        $xml = new \SimpleXMLElement($content);
+        $xml = new SimpleXMLElement($content);
         $namespaces = $xml->getDocNamespaces(true);
         foreach ($namespaces as $key => $val) {
             $xml->registerXPathNamespace($key, $val);
@@ -249,7 +265,6 @@ class CreatePresentation implements ICreatePresentation
         $nodes = $xml->xpath('//p:sldId[@id=' . $id . ']');
         $dom = dom_import_simplexml($nodes[0]);
         $dom->parentNode->removeChild($dom);
-
 
         $this->setFileContentByRelativePath('ppt/presentation.xml', $xml->asXML());
     }
