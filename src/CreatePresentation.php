@@ -38,6 +38,14 @@ class CreatePresentation implements ICreatePresentation
     }
 
     /**
+     * @return string
+     */
+    public function getResultPath(): string
+    {
+        return $this->resultPath;
+    }
+
+    /**
      * @inheritDoc
      */
     public function setVariableRegex(string $regex): void
